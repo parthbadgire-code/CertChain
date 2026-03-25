@@ -1,5 +1,5 @@
 # 🎓 CertChain — Blockchain Certificate Verification
-Built by Parth Badgire
+
 A decentralized application that lets institutions issue tamper-proof academic certificates on the Ethereum blockchain. Anyone can instantly verify a certificate's authenticity - no login, no central authority, no middleman.
 
 # Built by Parth Badgire
