@@ -12,12 +12,14 @@ const ABI = [
   "function removeIssuer(address issuer) public",
   "function isAuthorized(address addr) public view returns (bool)",
   "function owner() public view returns (address)",
+  "event CertificateIssued(string certId, string studentName, string courseName)",
 ];
 
 const TABS = [
   { id: "verify", label: "Verify", icon: "🔍" },
   { id: "issue", label: "Issue", icon: "📜" },
   { id: "revoke", label: "Revoke", icon: "🚫" },
+  { id: "records", label: "Records", icon: "📋" },
 ];
 
 export default function App() {
@@ -46,6 +48,8 @@ export default function App() {
   const [isOwner, setIsOwner] = useState(false);
   const [newIssuer, setNewIssuer] = useState("");
   const [removeIssuerAddr, setRemoveIssuerAddr] = useState("");
+  const [records, setRecords] = useState([]);
+  const [recordsLoading, setRecordsLoading] = useState(false);
 
   // Generate floating particles
   useEffect(() => {
@@ -173,11 +177,31 @@ export default function App() {
       setStatus("❌ Error: " + (e.reason || e.message));
     }
   }
+  async function fetchAllCertificates() {
+    try {
+      setRecordsLoading(true);
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+      const filter = contract.filters.CertificateIssued();
+      const events = await contract.queryFilter(filter);
+      const certs = events.map(e => ({
+        certId: e.args[0],
+        studentName: e.args[1],
+        courseName: e.args[2],
+      }));
+      setRecords(certs);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setRecordsLoading(false);
+    }
+  }
 
   function switchTab(t) {
     setTab(t);
     setStatus(null);
     setVerifyResult(null);
+    if (t === "records") fetchAllCertificates();
   }
 
   return (
@@ -397,6 +421,50 @@ export default function App() {
               <button className="btn btn-red" onClick={handleRemoveIssuer}>
                 <span>🚫</span> Remove Issuer
               </button>
+            </div>
+          )}
+          {/* Records */}
+          {tab === "records" && (
+            <div className="form-group">
+              {recordsLoading && (
+                <p style={{ textAlign: "center", color: "#888", fontSize: "13px" }}>
+                  Loading certificates from blockchain...
+                </p>
+              )}
+              {!recordsLoading && records.length === 0 && (
+                <p style={{ textAlign: "center", color: "#888", fontSize: "13px" }}>
+                  No certificates issued yet.
+                </p>
+              )}
+              {!recordsLoading && records.length > 0 && (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                  <thead>
+                    <tr>
+                      {["Cert ID", "Student"].map((h) => (
+                        <th key={h} style={{ textAlign: "left", padding: "8px", borderBottom: "1px solid rgba(255,255,255,0.1)", color: "#888", fontWeight: "500" }}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {records.map((r, i) => (
+                      <tr
+                        key={i}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => {
+                          setVerifyCertId(r.certId);
+                          switchTab("verify");
+                        }}
+                      >
+                        <td style={{ padding: "10px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)", color: "#60a5fa" }}>{r.certId}</td>
+                        <td style={{ padding: "10px 8px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{r.studentName}</td>
+
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           )}
 
